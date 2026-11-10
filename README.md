@@ -31,6 +31,10 @@ Then open http://localhost:5199 and click to wake. Chrome or Edge on a desktop w
 | `R` or `Space` | roar: everyone nearby freezes in terror for a moment, everyone else knows you are coming |
 | `1` / `2` | faster / sharper (render resolution) |
 
+**On a phone or tablet** it runs as a fullscreen landscape web app (add it to your home screen for the full effect):
+left thumb is a stick that appears where you put it down, push it all the way forward to run; right thumb drags to look
+and taps to tear; there are buttons for tear, roar and hold-to-smell. Phones get a lighter renderer.
+
 The thin red line is your hunger. It drains constantly and only feeding refills it.
 The dark hides you: people in lit rooms spot you from much further away than people in the dark,
 they hear you when you run, and they warn each other when they scream.

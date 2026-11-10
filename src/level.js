@@ -428,12 +428,12 @@ export class Level {
   }
 
   // ---------------------------------------------------------------- dynamic ceiling lights
-  initLights(scene, count = 5) {
+  initLights(scene, count = 5, mapSize = 1024) {
     this.pool = [];
     for (let i = 0; i < count; i++) {
       const l = new THREE.SpotLight(0xffe2a8, 0, 14, 1.08, 0.9, 1.7);
       l.castShadow = true;
-      l.shadow.mapSize.set(1024, 1024);
+      l.shadow.mapSize.set(mapSize, mapSize);
       l.shadow.camera.near = 0.2;
       l.shadow.camera.far = 14;
       l.shadow.bias = -0.0008;

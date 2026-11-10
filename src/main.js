@@ -13,6 +13,12 @@ const $ = (id) => document.getElementById(id);
 const SEED = Number(new URLSearchParams(location.search).get('seed')) || (Math.random() * 1e9) | 0;
 const rng = mulberry32(SEED);
 
+// phones and tablets get thumb controls, a lighter renderer and a fullscreen layout (?touch=1 forces it)
+const TOUCH = new URLSearchParams(location.search).has('touch')
+  || matchMedia('(hover: none) and (pointer: coarse)').matches
+  || (navigator.maxTouchPoints > 0 && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
+document.body.classList.toggle('touch', TOUCH);
+
 // ------------------------------------------------------------------ renderer
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
 renderer.shadowMap.enabled = true;
@@ -38,7 +44,7 @@ function gpuName() {
   } catch { return ''; }
 }
 const FAST_GPU = /RTX|GTX|Radeon RX|Radeon Pro|Arc\(TM\) [AB]\d|Quadro|Apple M\d/i.test(gpuName());
-const MAX_PIXELS = FAST_GPU ? 2.3e6 : 1.1e6;
+const MAX_PIXELS = TOUCH ? 0.55e6 : FAST_GPU ? 2.3e6 : 1.1e6;
 let scaleDown = 1; // lowered automatically when frames run long
 let userBoost = 1, autoScale = true; // keys 1 and 2 trade sharpness for speed by hand
 let pixelRatio = 1;
@@ -244,6 +250,7 @@ G.onRoar = () => {
   audio.play('monster_roar', 1.0, 0.9, 0.05);
   player.trauma = 1;
   G.caKick = 1;
+  if (TOUCH && navigator.vibrate) navigator.vibrate(160);
   for (const p of G.prey) p.roared(Math.hypot(p.pos.x - player.pos.x, p.pos.z - player.pos.z));
 };
 G.tryKill = () => {
@@ -270,6 +277,7 @@ function kill(p, fx, fz) {
   G.hitstop = 0.13;
   G.blood = 1;
   player.trauma = 1;
+  if (TOUCH && navigator.vibrate) navigator.vibrate([30, 40, 110]);
   if (p.voice) p.voice.kill();
   vTmp.set(p.pos.x, 1.3, p.pos.z);
   audio.playAt('prey_death', vTmp, 1.0, { ref: 6 });
@@ -311,7 +319,7 @@ async function init() {
   level = new Level(rng, 12);
   G.level = level;
   level.build(scene, tex);
-  level.initLights(scene, 4);
+  level.initLights(scene, TOUCH ? 3 : 4, TOUCH ? 512 : 1024);
   G.monsterField = new Int16Array(level.n * level.n);
 
   const start = level.macroCenter(6, 6);
@@ -331,8 +339,8 @@ async function init() {
     G.prey.push(new Prey(G, c.x + (rng() - 0.5) * 2, c.z + (rng() - 0.5) * 2, rng, i));
   }
 
-  // two real torch beams, handed to whichever torches are nearest
-  for (let i = 0; i < 2; i++) {
+  // two real torch beams (one on phones), handed to whichever torches are nearest
+  for (let i = 0; i < (TOUCH ? 1 : 2); i++) {
     const l = new THREE.SpotLight(0xfff1d6, 0, 20, 0.36, 0.5, 1.5);
     l.castShadow = true;
     l.shadow.mapSize.set(512, 512);
@@ -362,7 +370,7 @@ async function init() {
 
   drawTally();
   G.state = 'title';
-  go.textContent = 'click to wake';
+  go.textContent = TOUCH ? 'tap to wake' : 'click to wake';
 
   // dev server only: ?record=1 films the trailer with tools/record.js (see the notes at the top of that file)
   if (import.meta.env.DEV && new URLSearchParams(location.search).has('record')) {
@@ -381,7 +389,7 @@ function startGame() {
   $('title').classList.add('hidden');
   $('hud').classList.remove('hidden');
   if (G.rec) return; // the trailer recorder drives input and captions itself
-  lock();
+  if (TOUCH) { goFullscreen(); $('touch').classList.remove('hidden'); } else lock();
   setTimeout(() => G.state === 'playing' && say('you can smell them.', 3), 900);
   setTimeout(() => G.state === 'playing' && say('find them before the hunger finds you.', 3.6), 4600);
 }
@@ -422,6 +430,7 @@ function endGame(won) {
     : `${G.kills} of ${G.total} devoured. the rest are still down here, somewhere.`;
   $('end').classList.remove('hidden');
   $('hud').classList.add('hidden');
+  $('touch').classList.add('hidden');
   for (const k of ['breath', 'heart']) loops[k] && loops[k].setVolume(0);
   if (!won) audio.play('stinger', 0.6, 0.6);
 }
@@ -445,7 +454,7 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => { keys[e.code] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; rmb = false; });
 addEventListener('mousedown', (e) => {
-  if (G.state !== 'playing') return;
+  if (G.state !== 'playing' || TOUCH) return; // on phones a tap also fires a fake mousedown
   if (e.button === 0) attackQ = true;
   if (e.button === 2) rmb = true;
 });
@@ -461,6 +470,90 @@ addEventListener('mousemove', (e) => {
   if (spike) return;
   inp.dx += mx; inp.dy += my;
 });
+
+// ------------------------------------------------------------------ touch controls (phones / tablets)
+// left thumb: a stick that appears where you put it down (push it all the way forward to run)
+// right thumb: drag to look, quick tap to tear. buttons: tear, roar, hold to smell
+const touch = { fwd: 0, strafe: 0, sprint: false, sense: false, moveId: null, lookId: null, ox: 0, oy: 0, lx: 0, ly: 0, t0: 0, moved: 0 };
+function goFullscreen() {
+  const el = document.documentElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (!req || document.fullscreenElement) return;
+  try {
+    const p = req.call(el, { navigationUI: 'hide' });
+    if (p && p.then) p.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).catch(() => {});
+  } catch { /* iPhone Safari has no fullscreen API: add to home screen instead */ }
+}
+if (TOUCH) {
+  const layer = $('touch'), stick = $('stick'), knob = stick.firstElementChild;
+  const R = 54, LOOK = 2.3; // stick travel in px, look speed (px -> mouse counts)
+  const endMove = () => {
+    touch.moveId = null; touch.fwd = touch.strafe = 0; touch.sprint = false;
+    stick.classList.remove('on', 'run');
+  };
+  layer.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (G.state !== 'playing') return;
+    for (const t of e.changedTouches) {
+      if (t.target.closest('button')) continue; // buttons handle themselves
+      if (t.clientX < innerWidth * 0.45 && touch.moveId === null) {
+        touch.moveId = t.identifier; touch.ox = t.clientX; touch.oy = t.clientY;
+        stick.style.left = t.clientX + 'px'; stick.style.top = t.clientY + 'px';
+        knob.style.transform = 'translate(0px, 0px)';
+        stick.classList.add('on');
+      } else if (touch.lookId === null) {
+        touch.lookId = t.identifier; touch.lx = t.clientX; touch.ly = t.clientY;
+        touch.t0 = performance.now(); touch.moved = 0;
+      }
+    }
+  }, { passive: false });
+  layer.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier === touch.moveId) {
+        let dx = t.clientX - touch.ox, dy = t.clientY - touch.oy;
+        const d = Math.hypot(dx, dy);
+        if (d > R) { dx *= R / d; dy *= R / d; }
+        knob.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
+        const mag = Math.min(d, R) / R;
+        touch.strafe = mag < 0.16 ? 0 : dx / R;
+        touch.fwd = mag < 0.16 ? 0 : -dy / R;
+        touch.sprint = mag > 0.9 && touch.fwd > 0.55;
+        stick.classList.toggle('run', touch.sprint);
+      } else if (t.identifier === touch.lookId) {
+        const dx = t.clientX - touch.lx, dy = t.clientY - touch.ly;
+        touch.lx = t.clientX; touch.ly = t.clientY;
+        touch.moved += Math.abs(dx) + Math.abs(dy);
+        inp.dx += dx * LOOK; inp.dy += dy * LOOK;
+      }
+    }
+  }, { passive: false });
+  const end = (e) => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier === touch.moveId) endMove();
+      else if (t.identifier === touch.lookId) {
+        touch.lookId = null;
+        if (G.state === 'playing' && touch.moved < 14 && performance.now() - touch.t0 < 240) attackQ = true; // a tap
+      }
+    }
+  };
+  layer.addEventListener('touchend', end, { passive: false });
+  layer.addEventListener('touchcancel', end, { passive: false });
+
+  const button = (id, down, up) => {
+    const b = $(id);
+    b.addEventListener('touchstart', (e) => { e.preventDefault(); b.classList.add('down'); if (G.state === 'playing') down(); }, { passive: false });
+    const release = (e) => { e.preventDefault(); b.classList.remove('down'); if (up) up(); };
+    b.addEventListener('touchend', release, { passive: false });
+    b.addEventListener('touchcancel', release, { passive: false });
+  };
+  button('bAtk', () => { attackQ = true; });
+  button('bRoar', () => { roarQ = true; });
+  button('bSmell', () => { touch.sense = true; }, () => { touch.sense = false; });
+
+  $('keys').innerHTML = '<b>left thumb</b> stalk, push far to run &nbsp;·&nbsp; <b>right thumb</b> look, tap to tear<br><b>roar</b> freezes them &nbsp;·&nbsp; <b>hold smell</b> to see their fear';
+  addEventListener('orientationchange', () => setTimeout(resize, 250));
+}
 
 // ------------------------------------------------------------------ per-frame
 const fPos = new THREE.Vector3(), fDir = new THREE.Vector3();
@@ -487,10 +580,10 @@ function updateFlashlights() {
 let fieldT = 0, zapT = 3;
 function update(dt) {
   G.elapsed += dt;
-  inp.fwd = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
-  inp.strafe = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
-  inp.sprint = !!(keys.ShiftLeft || keys.ShiftRight);
-  inp.sense = rmb || !!keys.KeyE;
+  inp.fwd = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + touch.fwd;
+  inp.strafe = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + touch.strafe;
+  inp.sprint = !!(keys.ShiftLeft || keys.ShiftRight) || touch.sprint;
+  inp.sense = rmb || !!keys.KeyE || touch.sense;
   inp.attack = attackQ; inp.roar = roarQ;
   attackQ = roarQ = false;
   player.update(dt, inp);
@@ -588,7 +681,8 @@ function tick(raw, real) {
   if (G.hitstop > 0) { G.hitstop -= raw; dt *= 0.05; }
   G.time += dt;
 
-  if (G.state === 'playing') update(dt);
+  // a phone held upright shows "turn your phone" and the hunt waits
+  if (G.state === 'playing' && !(TOUCH && innerHeight > innerWidth)) update(dt);
   else if (G.state === 'title') { titleInp.dx = -raw * 22; player.update(dt, titleInp); }
 
   // smelling: the lit world sinks into cold dark so only body heat is left glowing
