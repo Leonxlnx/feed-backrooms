@@ -2,6 +2,8 @@
 
 A Backrooms horror game where **you are the thing in the rooms**.
 
+**▶ Play it: https://feed-backrooms.vercel.app** (desktop with keyboard and mouse, or a phone held sideways)
+
 They noclipped in with torches and no idea where they are. You were already here, and you are hungry.
 Stalk the yellow corridors, smell their body heat through the walls, and catch all eight before you starve.
 
