@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { inject } from '@vercel/analytics';
 import { Level, CELL } from './level.js';
 import { Prey } from './prey.js';
 import { Player } from './player.js';
@@ -9,6 +10,7 @@ import { shared, makeGrimeTexture } from './materials.js';
 import { mulberry32, clamp, damp, smoothstep } from './util.js';
 
 const $ = (id) => document.getElementById(id);
+inject({ mode: import.meta.env.DEV ? 'development' : 'production' }); // Vercel Analytics page views
 // ?seed=123 replays the same building and the same people
 const SEED = Number(new URLSearchParams(location.search).get('seed')) || (Math.random() * 1e9) | 0;
 const rng = mulberry32(SEED);
