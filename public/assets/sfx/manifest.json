@@ -1,0 +1,17 @@
+{
+  "prey_scream": ["prey_scream_1.mp3", "prey_scream_2.mp3", "prey_scream_3.mp3", "prey_scream_4.mp3", "prey_scream_5.mp3", "prey_scream_6.mp3"],
+  "monster_growl": ["monster_growl_1.mp3", "monster_growl_2.mp3", "monster_growl_3.mp3", "monster_growl_4.mp3"],
+  "monster_roar": ["monster_roar_1.mp3", "monster_roar_2.mp3"],
+  "gore": ["gore_1.mp3", "gore_2.mp3", "gore_3.mp3"],
+  "amb_hum": ["amb_hum.mp3"],
+  "amb_drone": ["amb_drone.mp3"],
+  "heartbeat": ["heartbeat.mp3"],
+  "monster_step": ["monster_step_1.mp3", "monster_step_2.mp3", "monster_step_3.mp3"],
+  "prey_death": ["prey_death_1.mp3", "prey_death_2.mp3", "prey_death_3.mp3"],
+  "stinger": ["stinger_1.mp3", "stinger_2.mp3", "stinger_3.mp3"],
+  "monster_breath": ["monster_breath.mp3"],
+  "prey_whimper": ["prey_whimper_1.mp3", "prey_whimper_2.mp3", "prey_whimper_3.mp3"],
+  "prey_step": ["prey_step_1.mp3", "prey_step_2.mp3", "prey_step_3.mp3", "prey_step_4.mp3"],
+  "flicker": ["flicker_1.mp3", "flicker_2.mp3"],
+  "whisper": ["whisper.mp3"]
+}

@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.capture/
+.debug-shots/
+.claude/
+*.log

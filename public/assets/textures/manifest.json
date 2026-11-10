@@ -1,0 +1,9 @@
+{
+  "wall": { "maps": ["color", "normal", "roughness", "ao"], "source": "decrepit_wallpaper (Poly Haven)", "tileMeters": 2.5 },
+  "carpet": { "maps": ["color", "normal", "roughness", "ao"], "source": "Carpet011 (ambientCG)", "tileMeters": 2 },
+  "ceiling": { "maps": ["color", "normal", "roughness", "ao"], "source": "OfficeCeiling001 (ambientCG)", "tileMeters": 2 },
+  "concrete": { "maps": ["color", "normal", "roughness", "ao"], "source": "dirty_concrete (Poly Haven)", "tileMeters": 3 },
+  "tiles": { "maps": ["color", "normal", "roughness"], "source": "Tiles036 (ambientCG)", "tileMeters": 2 },
+  "metal": { "maps": ["color", "normal", "roughness", "ao"], "source": "PaintedMetal013 (ambientCG)", "tileMeters": 2 },
+  "wall_alt": { "maps": ["color", "normal", "roughness"], "source": "Wallpaper002B (ambientCG)", "tileMeters": 2 }
+}
